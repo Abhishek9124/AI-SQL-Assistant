@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.env
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Model weights — too large for GitHub, push to HuggingFace Hub instead
+*.bin
+*.safetensors
+*.pt
+*.pth
+adapter_model/
+olympics_model_outputs/
+sql_outputs/
+
+# Data files — download at runtime
+*.csv
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,10 @@
+unsloth
+trl
+peft
+accelerate
+bitsandbytes
+transformers
+datasets
+streamlit
+pandas
+torch
