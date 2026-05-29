@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic
+# Model serving (optional — backend runs in demo mode without these / without a GPU)
+transformers
+torch
+accelerate
+bitsandbytes

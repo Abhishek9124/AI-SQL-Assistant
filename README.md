@@ -22,8 +22,9 @@ Covers every Olympics from **Athens 1896 → Rio 2016**, including athlete names
 | Fine-tuning | Unsloth + LoRA (PEFT), TRL SFTTrainer |
 | Training | 30 NL/SQL pairs · 10 epochs · cosine LR schedule |
 | Inference | Hugging Face Transformers, 4-bit |
-| Backend | SQLite (`olympics.db`, 271K rows) |
-| Frontend | Streamlit |
+| Data | SQLite (`olympics.db`, 271K rows) |
+| API | FastAPI (lazy model load + demo fallback) |
+| Frontend | React + Vite + Tailwind + Framer Motion + Recharts (also a single-file Streamlit app) |
 | Model hosting | [Hugging Face Hub](https://huggingface.co/Abhishek9124/llama3-olympics-120years) |
 
 ---
@@ -37,14 +38,52 @@ Covers every Olympics from **Athens 1896 → Rio 2016**, including athlete names
 
 ---
 
-## Run locally
+## The app
+
+Two ways to run the project:
+
+### 1. React + FastAPI (advanced UI)
+
+A modern single-page UI (React + Tailwind + Framer Motion + Recharts) backed by a FastAPI service that serves the model and executes the SQL.
+
+**Backend**
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload          # http://localhost:8000
+```
+
+**Frontend**
+```bash
+cd frontend
+npm install
+npm run dev                        # http://localhost:5173
+```
+
+The Vite dev server proxies `/api` to the backend automatically. The backend
+loads the fine-tuned model lazily on the first query; if the model or a GPU
+isn't available it **degrades gracefully to a demo engine** (a rule-based SQL
+generator) so the UI stays fully interactive for screenshots and demos.
+
+API surface:
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/query` | Question → SQL → executed results (`sql`, `columns`, `rows`, `elapsed_ms`, `engine`) |
+| `GET /api/stats` | Dashboard KPIs (records, athletes, countries, sports, gold, span) |
+| `GET /api/examples` | Curated example questions |
+| `GET /api/health` | Model + DB status |
+
+### 2. Streamlit (single-file)
 
 ```bash
 pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
-You'll need `olympics.db` in the project root (built from the Kaggle "120 years of Olympic history" dataset — the notebook shows the one-liner to create it).
+Either way you'll need `olympics.db` in the project root (built from the Kaggle
+"120 years of Olympic history" dataset — the notebook shows the one-liner to
+create it). Read-only `SELECT` queries are enforced server-side.
 
 ---
 
@@ -52,10 +91,18 @@ You'll need `olympics.db` in the project root (built from the Kaggle "120 years 
 
 ```
 .
-├── Fine_TuningLLM.ipynb   # End-to-end training notebook
-├── streamlit_app.py       # Inference UI
+├── Fine_TuningLLM.ipynb     # End-to-end training notebook
+├── streamlit_app.py         # Single-file Streamlit UI
 ├── requirements.txt
-└── README.md
+├── backend/                 # FastAPI inference API
+│   ├── main.py
+│   └── requirements.txt
+└── frontend/                # React + Vite + Tailwind UI
+    ├── src/
+    │   ├── App.jsx
+    │   ├── api.js
+    │   └── components/      # StatCard, QueryConsole, SqlBlock, ResultsTable, ResultChart
+    └── package.json
 ```
 
 ---
