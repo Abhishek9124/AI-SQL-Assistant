@@ -139,11 +139,55 @@ _DEMO_RULES: list[tuple[str, str]] = [
 ]
 
 
+# Capitalised multi-word phrases that aren't athlete names.
+_NAME_STOPWORDS = {
+    "How", "Which", "What", "Show", "Who", "List", "Top", "When", "Where",
+    "Olympic", "Olympics", "Summer", "Winter", "Games", "Season",
+}
+_NAME_RE = re.compile(r"\b([A-Z][a-z]+(?:\s+(?:[A-Z][a-z]+|[A-Z]\.))+)\b")
+
+
+def _extract_person(question: str) -> Optional[str]:
+    """Pull a likely athlete name (2+ capitalised words) from the question."""
+    candidates = []
+    for m in _NAME_RE.finditer(question):
+        phrase = m.group(1)
+        first = phrase.split()[0]
+        if first in _NAME_STOPWORDS:
+            # Drop a leading stopword like "How"/"Show" but keep the rest.
+            rest = phrase.split(maxsplit=1)
+            phrase = rest[1] if len(rest) > 1 and len(rest[1].split()) >= 1 else ""
+        if len(phrase.split()) >= 2:
+            candidates.append(phrase)
+    return max(candidates, key=len) if candidates else None
+
+
 def _generate_sql_demo(question: str) -> str:
     q = question.lower()
     for pattern, sql in _DEMO_RULES:
         if re.search(pattern, q):
             return sql
+
+    # Free-form athlete questions, e.g. "How many medals has Usain Bolt won?"
+    person = _extract_person(question)
+    if person:
+        # Match each name token separately so middle names don't break it
+        # (the dataset stores e.g. "Usain St. Leo Bolt", "Michael Fred Phelps, II").
+        tokens = [t.replace("'", "''") for t in person.split() if len(t) > 1]
+        name_clause = " AND ".join(f"Name LIKE '%{t}%'" for t in tokens)
+        if "how many" in q or "count" in q or "number of" in q:
+            return (
+                "SELECT Medal, COUNT(*) AS count FROM athlete_events "
+                f"WHERE {name_clause} AND Medal IS NOT NULL "
+                "GROUP BY Medal ORDER BY count DESC;"
+            )
+        return (
+            "SELECT Name, Team, Year, Sport, Event, Medal FROM athlete_events "
+            f"WHERE {name_clause} "
+            + ("AND Medal IS NOT NULL " if "medal" in q or "won" in q or "win" in q else "")
+            + "ORDER BY Year;"
+        )
+
     # Generic fallback: a safe overview query.
     return ("SELECT Team, COUNT(*) AS medals FROM athlete_events "
             "WHERE Medal IS NOT NULL GROUP BY Team ORDER BY medals DESC LIMIT 10;")
@@ -275,7 +319,7 @@ def stats() -> dict:
         "db_found": True,
         "total_records": _scalar("SELECT COUNT(*) FROM athlete_events"),
         "total_athletes": _scalar("SELECT COUNT(DISTINCT ID) FROM athlete_events"),
-        "countries": _scalar("SELECT COUNT(DISTINCT Team) FROM athlete_events"),
+        "countries": _scalar("SELECT COUNT(DISTINCT NOC) FROM athlete_events"),
         "sports": _scalar("SELECT COUNT(DISTINCT Sport) FROM athlete_events"),
         "events": _scalar("SELECT COUNT(DISTINCT Event) FROM athlete_events"),
         "years_span": f"{min_year}–{max_year}",
