@@ -1,18 +1,3 @@
-"""
-Olympics NL->SQL — FastAPI backend.
-
-Serves the fine-tuned Llama 3.2-3B model:
-  POST /api/query     -> natural language question -> SQL -> executed results
-  GET  /api/stats     -> dashboard KPIs computed from olympics.db
-  GET  /api/examples  -> curated example questions
-  GET  /api/health    -> model / db status
-
-The model loads lazily on the first /api/query call so the server starts fast.
-If the model cannot be loaded (e.g. no GPU / weights unavailable) the server
-falls back to DEMO_MODE: a small rule-based SQL generator so the UI stays
-fully functional for demos and screenshots.
-"""
-
 import os
 import re
 import sqlite3

@@ -5,11 +5,12 @@ export default function StatCard({ icon: Icon, label, value, accent = "#f5c518",
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
       transition={{ duration: 0.5, delay }}
-      className="glass relative overflow-hidden rounded-2xl p-5 shadow-card"
+      className="glass group relative overflow-hidden rounded-2xl p-5 shadow-card transition-colors hover:border-white/20"
     >
       <div
-        className="absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-20 blur-2xl"
+        className="absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-20 blur-2xl transition-opacity duration-300 group-hover:opacity-40"
         style={{ background: accent }}
       />
       <div className="flex items-center gap-3">

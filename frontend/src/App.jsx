@@ -10,7 +10,8 @@ import {
   Zap,
   AlertTriangle,
   Github,
-  Cpu,
+  Clock,
+  Rows3,
 } from "lucide-react";
 
 import { fetchExamples, fetchHealth, fetchStats, runQuery } from "./api";
@@ -52,12 +53,7 @@ export default function App() {
     }
   };
 
-  const engineLabel =
-    health?.model_state === "loaded"
-      ? "Llama 3.2-3B · live"
-      : health?.model_state === "demo"
-        ? "Demo engine"
-        : "Connecting…";
+  const online = !!health;
 
   return (
     <>
@@ -78,9 +74,20 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/70">
-              <Cpu size={13} className="text-emerald-400" />
-              {engineLabel}
+            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/70">
+              <span className="relative flex h-2 w-2">
+                <span
+                  className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    online ? "animate-ping bg-emerald-400" : "bg-white/30"
+                  }`}
+                />
+                <span
+                  className={`relative inline-flex h-2 w-2 rounded-full ${
+                    online ? "bg-emerald-400" : "bg-white/40"
+                  }`}
+                />
+              </span>
+              {online ? "Live" : "Connecting…"}
             </span>
             <a
               href="https://github.com/Abhishek9124/olympics-nl-to-sql"
@@ -182,15 +189,14 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-5"
               >
-                <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
-                  <span className="rounded-full bg-white/[0.06] px-3 py-1">
-                    ⚡ {result.elapsed_ms} ms
+                <div className="flex flex-wrap items-center gap-2 text-xs text-white/55">
+                  <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5">
+                    <Clock size={12} className="text-gold" />
+                    {result.elapsed_ms} ms
                   </span>
-                  <span className="rounded-full bg-white/[0.06] px-3 py-1">
-                    engine: {result.engine}
-                  </span>
-                  <span className="rounded-full bg-white/[0.06] px-3 py-1">
-                    {fmt(result.row_count)} rows
+                  <span className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5">
+                    <Rows3 size={12} className="text-sky-400" />
+                    {fmt(result.row_count)} {result.row_count === 1 ? "row" : "rows"}
                   </span>
                 </div>
 
@@ -214,6 +220,51 @@ export default function App() {
                     No rows returned — try a different question.
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {!loading && !error && !result && stats?.top_countries?.length > 0 && (
+              <motion.div
+                key="idle"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="glass rounded-2xl p-6"
+              >
+                <div className="mb-4 flex items-center gap-2 text-sm font-medium text-white/70">
+                  <Medal size={16} className="text-gold" />
+                  All-time medal leaders
+                  <span className="ml-auto text-xs font-normal text-white/35">
+                    ask a question above to dig deeper
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  {stats.top_countries.map((c, i) => {
+                    const max = stats.top_countries[0].medals || 1;
+                    const pct = Math.round((c.medals / max) * 100);
+                    return (
+                      <div key={c.team} className="flex items-center gap-3">
+                        <span className="w-5 text-right font-mono text-xs text-white/40">
+                          {i + 1}
+                        </span>
+                        <span className="w-40 shrink-0 truncate text-sm text-white/80">
+                          {c.team}
+                        </span>
+                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.8, delay: i * 0.08 }}
+                            className="h-full rounded-full bg-gradient-to-r from-gold to-amber-400"
+                          />
+                        </div>
+                        <span className="w-16 text-right font-mono text-xs text-gold/90">
+                          {fmt(c.medals)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
