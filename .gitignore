@@ -28,6 +28,13 @@ sql_outputs/
 *.db
 *.sqlite
 
+# AI SQL Assistant runtime workspace (uploads, built DBs, trained models)
+data/
+backend/data/
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Personal / local-only notes
+interview.md
