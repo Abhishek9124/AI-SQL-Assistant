@@ -14,7 +14,7 @@ Built with a **React + FastAPI** web app and a **hybrid SQL engine** that combin
 - **Query** — type a question; SQL is generated, validated, executed read-only, and results are displayed
 - **History panel** — past queries and results saved per session
 - **Schema viewer** — column types, roles, cardinalities, and sample values
-- **No API key required** — the deterministic fallback always works out of the box
+- **No API key required** — works fully offline out of the box
 
 ---
 
@@ -25,8 +25,7 @@ Every question passes through the following chain. The first engine that returns
 | Priority | Engine | Available when |
 |---|---|---|
 | 1 | **Fine-tuned model** (Flan-T5) | after training on the dataset |
-| 2 | **Claude** | `ANTHROPIC_API_KEY` is set |
-| 3 | **Deterministic generator** | always — the guaranteed fallback |
+| 2 | **Deterministic generator** | always — the guaranteed fallback |
 
 The deterministic generator (`heuristic.py`) parses the question against the inferred schema — handling counts, group-bys, aggregates, filters, and ranking — so the app is fully functional with no training and no API key.
 
@@ -57,7 +56,7 @@ The fine-tuned Flan-T5 model is evaluated the same way at serving time — each 
 | API | FastAPI, Uvicorn |
 | Ingestion | pandas → SQLite, automatic column profiling |
 | Fine-tuning | PyTorch, Hugging Face Transformers (`flan-t5-small`), CPU / CUDA |
-| SQL engine | fine-tuned model · Claude (optional) · deterministic heuristic |
+| SQL engine | fine-tuned model · deterministic heuristic |
 
 ---
 
@@ -98,19 +97,6 @@ npm run dev        # opens at http://localhost:5173
 
 Vite proxies `/api` requests to the backend on port 8000.
 
-### Optional: Claude fallback
-
-```bash
-# macOS / Linux
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Windows PowerShell
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
-```
-
-When set, Claude handles queries the fine-tuned model can't answer. Only the schema and question are sent — your data stays local.
-
----
 
 ## Usage
 
@@ -205,7 +191,6 @@ pandas
 python-multipart
 torch          # optional — enables fine-tuning
 transformers   # optional — enables fine-tuning
-anthropic      # optional — enables Claude fallback
 ```
 
 Full pinned list in `backend/requirements.txt`.
