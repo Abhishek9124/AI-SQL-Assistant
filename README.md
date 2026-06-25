@@ -1,157 +1,194 @@
-# 🧠 AI SQL Assistant — Natural language → SQL on any CSV
+# SQL Assistant — Natural Language to SQL on Any CSV
 
-Upload **any CSV**, optionally **fine-tune a small model on it**, then ask questions
-in plain English and get back real SQL executed live against your data — as a
-table with CSV export and an auto chart.
+Upload any CSV, ask questions in plain English, and get back real SQL executed live against your data — shown as a table with CSV export and an auto-generated chart.
 
-Built with a **React + FastAPI** web app and a **hybrid SQL engine** that combines
-a per-dataset fine-tuned **Flan-T5** model with a deterministic, schema-aware SQL
-generator (and an optional Claude upgrade).
+Built with a **React + FastAPI** web app and a **hybrid SQL engine** that combines a per-dataset fine-tuned **Flan-T5** model with a deterministic, schema-aware SQL generator.
 
 ---
 
-## What it does
+## Features
 
-1. **Upload a CSV** → the backend profiles every column (type, role, cardinality,
-   sample values), loads it into SQLite, and infers a schema automatically.
-2. **Train (optional)** → fine-tune `google/flan-t5-small` on synthetic
-   question/SQL pairs generated from *your* schema. Uses your **GPU** when
-   available (CUDA), otherwise CPU. Live progress (epoch / step / loss) streams to
-   the UI.
-3. **Ask** → type a question; the assistant generates SQL, runs it read-only, and
-   shows the results.
-
-It works on *any* tabular CSV — sales, logistics, survey data, the bundled
-Olympics dataset, anything.
+- **Upload any CSV** — backend profiles every column (type, role, cardinality, sample values), loads it into SQLite, and infers a schema automatically
+- **Multi-dataset** — switch between multiple uploaded datasets; each gets its own SQLite DB and trained model
+- **Fine-tune on your data** — trains `google/flan-t5-small` on synthetic question/SQL pairs generated from your schema; uses GPU (CUDA) when available, falls back to CPU; live progress streams to the UI
+- **Query** — type a question; SQL is generated, validated, executed read-only, and results are displayed
+- **History panel** — past queries and results saved per session
+- **Schema viewer** — column types, roles, cardinalities, and sample values
+- **No API key required** — the deterministic fallback always works out of the box
 
 ---
 
-## The hybrid SQL engine
+## Hybrid SQL Engine
 
-Every question is answered by the first engine that produces a **valid** read-only
-`SELECT` (validated by `EXPLAIN` against the real table); anything invalid falls
-through to the next:
+Every question passes through the following chain. The first engine that returns a valid, read-only `SELECT` (verified by `EXPLAIN` against the real table) wins:
 
-| Order | Engine | When |
+| Priority | Engine | Available when |
 |---|---|---|
-| 1 | **Fine-tuned model** (Flan-T5) | after you train on the dataset |
-| 2 | **Claude** | if `ANTHROPIC_API_KEY` is set |
-| 3 | **Deterministic generator** | always available — the safety net |
+| 1 | **Fine-tuned model** (Flan-T5) | after training on the dataset |
+| 2 | **Claude** | `ANTHROPIC_API_KEY` is set |
+| 3 | **Deterministic generator** | always — the guaranteed fallback |
 
-The deterministic generator parses the question against the inferred schema
-(counts, group-by, aggregates, filters, ranking), so the app is fully usable
-**without any training or API key**.
+The deterministic generator (`heuristic.py`) parses the question against the inferred schema — handling counts, group-bys, aggregates, filters, and ranking — so the app is fully functional with no training and no API key.
 
 ---
 
-## Tech stack
+## Tech Stack
 
 | Layer | Tools |
 |---|---|
-| Frontend | React + Vite + Tailwind + Framer Motion + Recharts |
-| API | FastAPI + Uvicorn |
-| Ingestion | pandas → SQLite, automatic schema inference & profiling |
-| Fine-tuning | PyTorch + Transformers (`google/flan-t5-small`), CPU or CUDA |
-| Generation | fine-tuned model · Claude (optional) · deterministic fallback |
+| Frontend | React 18, Vite, Tailwind CSS, Framer Motion, Recharts |
+| API | FastAPI, Uvicorn |
+| Ingestion | pandas → SQLite, automatic column profiling |
+| Fine-tuning | PyTorch, Hugging Face Transformers (`flan-t5-small`), CPU / CUDA |
+| SQL engine | fine-tuned model · Claude (optional) · deterministic heuristic |
 
 ---
 
 ## Quickstart
 
-> Requires **Python 3.10+** and **Node 18+**. Run the backend and frontend in two
-> terminals.
+Requires **Python 3.10+** and **Node 18+**. Run the backend and frontend in two separate terminals.
 
-### 1. Backend — FastAPI (terminal 1)
+### 1. Backend (terminal 1)
 
 ```bash
 python -m venv venv
-# Windows (PowerShell):  venv\Scripts\Activate.ps1
-# macOS / Linux:         source venv/bin/activate
+
+# Windows (PowerShell):
+venv\Scripts\Activate.ps1
+
+# macOS / Linux:
+source venv/bin/activate
 
 pip install -r backend/requirements.txt
-uvicorn backend.main:app --port 8000     # run from the project root
+uvicorn backend.main:app --port 8000
 ```
 
-The optional `torch`/`transformers` enable real fine-tuning. **For GPU training**
-install the CUDA build of torch:
+Run from the **project root** so `backend` is importable as a package.
+
+**GPU training** — install the CUDA build of PyTorch (example for CUDA 12.6):
 
 ```bash
 pip install torch==2.12.0+cu126 --index-url https://download.pytorch.org/whl/cu126
 ```
 
-### 2. Frontend — React (terminal 2)
+### 2. Frontend (terminal 2)
 
 ```bash
 cd frontend
 npm install
-npm run dev                               # http://localhost:5173
+npm run dev        # opens at http://localhost:5173
 ```
 
-Open **http://localhost:5173**, drop in a CSV (or click *Try the bundled sample*),
-optionally hit **Train**, and start asking. Vite proxies `/api` to the backend.
+Vite proxies `/api` requests to the backend on port 8000.
 
-### Optional: Claude upgrade
+### Optional: Claude fallback
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...       # Windows: $env:ANTHROPIC_API_KEY="..."
+# macOS / Linux
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Windows PowerShell
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
 ```
 
-When set, the assistant uses Claude for SQL on questions the fine-tuned model
-can't handle (only the schema + question are sent, never your full data).
+When set, Claude handles queries the fine-tuned model can't answer. Only the schema and question are sent — your data stays local.
 
 ---
 
-## API surface
+## Usage
 
-| Endpoint | Purpose |
-|---|---|
-| `POST /api/upload` | Upload a CSV → ingest, infer schema, return stats + examples |
-| `POST /api/sample` | Load the bundled sample dataset (`{ "train": true }` to also train) |
-| `POST /api/datasets/{id}/train` | Start per-dataset fine-tuning (background job) |
-| `GET /api/datasets/{id}/status` | Training progress (state / epoch / step / loss) |
-| `GET /api/schema` | Inferred columns, roles, sample rows |
-| `GET /api/stats` | Auto dashboard KPIs |
-| `GET /api/examples` | Schema-derived example questions |
-| `POST /api/query` | Question → SQL → executed results (`sql`, `columns`, `rows`, `engine`) |
-| `GET /api/health` | ML availability, active dataset, Claude availability |
+1. Open `http://localhost:5173`
+2. Drop a CSV onto the upload zone (or click **Try the bundled sample**)
+3. The schema panel populates automatically — review inferred column types and roles
+4. Optionally click **Train** to fine-tune a model on your dataset (takes ~1–3 min on GPU)
+5. Type a question and hit **Ask**
+6. Results appear as a table and auto-chart; click **Export CSV** to download
+
+To switch datasets, use the **Dataset Switcher** in the sidebar.
 
 ---
 
-## Project layout
+## API Reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | ML availability, active dataset, Claude status |
+| `POST` | `/api/upload` | Upload a CSV — ingest, profile, return schema + stats |
+| `POST` | `/api/sample` | Load the bundled sample dataset |
+| `GET` | `/api/datasets` | List all uploaded datasets |
+| `POST` | `/api/datasets/{id}/activate` | Switch active dataset |
+| `POST` | `/api/datasets/{id}/train` | Start fine-tuning (background job) |
+| `GET` | `/api/datasets/{id}/status` | Training progress (state / epoch / step / loss) |
+| `GET` | `/api/schema` | Active dataset columns, roles, sample rows |
+| `GET` | `/api/stats` | Auto-computed dashboard KPIs |
+| `GET` | `/api/examples` | Schema-derived example questions |
+| `POST` | `/api/query` | Natural language → SQL → executed results |
+| `POST` | `/api/execute` | Run a raw SQL query directly |
+
+---
+
+## Project Layout
 
 ```
 .
-├── backend/                 # FastAPI app
-│   ├── main.py              # endpoints + app state
-│   ├── ingest.py            # CSV → SQLite + schema inference/profiling
-│   ├── synth.py             # schema-derived synthetic NL→SQL pairs + examples
-│   ├── trainer.py           # per-CSV fine-tuning (CPU/GPU) + serving
-│   ├── engine.py            # hybrid generation + validation + execution
-│   ├── heuristic.py         # deterministic schema-aware SQL generator
-│   ├── storage.py           # dataset registry (uploads, DBs, models, status)
+├── backend/
+│   ├── main.py          # FastAPI app, endpoints, app state
+│   ├── ingest.py        # CSV → SQLite, column profiling, schema inference
+│   ├── synth.py         # synthetic NL→SQL pair generation + example questions
+│   ├── trainer.py       # Flan-T5 fine-tuning loop (CPU/GPU) + model serving
+│   ├── engine.py        # hybrid query pipeline (model → Claude → heuristic)
+│   ├── heuristic.py     # deterministic schema-aware SQL generator
+│   ├── storage.py       # dataset registry (uploads, DBs, models, status files)
 │   └── requirements.txt
-├── frontend/                # React + Vite + Tailwind UI
+├── frontend/
 │   └── src/
-│       ├── App.jsx
-│       ├── api.js
-│       └── components/      # UploadZone, SchemaPanel, TrainPanel, QueryConsole,
-│                            # StatCard, SqlBlock, ResultsTable, ResultChart
-├── Fine_TuningLLM.ipynb     # (legacy) heavyweight Llama LoRA notebook
-└── data/                    # runtime workspace (gitignored): uploads, DBs, models
+│       ├── App.jsx               # root layout and routing
+│       ├── api.js                # typed API client
+│       └── components/
+│           ├── UploadZone.jsx    # drag-and-drop CSV upload
+│           ├── DatasetSwitcher.jsx  # switch between loaded datasets
+│           ├── SchemaPanel.jsx   # column types, roles, cardinalities
+│           ├── TrainPanel.jsx    # fine-tune trigger + live progress
+│           ├── QueryConsole.jsx  # question input + results display
+│           ├── HistoryPanel.jsx  # past queries and results
+│           ├── StatCard.jsx      # KPI card
+│           ├── SqlBlock.jsx      # syntax-highlighted SQL display
+│           ├── ResultsTable.jsx  # paginated results table + CSV export
+│           └── ResultChart.jsx   # auto chart (bar / line / pie)
+└── data/                # runtime workspace — gitignored
+    └── datasets/
+        └── <id>/
+            ├── upload.csv
+            ├── data.db
+            ├── meta.json
+            ├── status.json
+            └── model/
 ```
 
 ---
 
-## How "training" works
+## How Training Works
 
-On **Train**, the backend:
+When you click **Train**:
 
-1. Generates synthetic `(question, SQL)` pairs from the inferred schema
-   (`synth.py`) — counts, group-bys, aggregates, filters, ranking.
-2. Fine-tunes `flan-t5-small` on them with a plain PyTorch loop (GPU if available),
-   streaming epoch / step / loss to `status.json`.
-3. Saves the model under `data/datasets/<id>/model/` and serves it for that
-   dataset.
+1. `synth.py` generates synthetic `(question, SQL)` pairs from the inferred schema — covering counts, group-bys, aggregates, filters, and ranking queries
+2. `trainer.py` fine-tunes `flan-t5-small` on those pairs using a standard PyTorch training loop, streaming progress to `status.json`
+3. The trained model is saved to `data/datasets/<id>/model/` and loaded for that dataset
 
-A tiny model trained on a small CSV won't be perfect — which is exactly why the
-deterministic generator validates and backstops every answer.
+Training is per-dataset — switching datasets loads the corresponding model. A model trained on a small CSV won't be perfect, which is why the deterministic generator validates every output and serves as the backstop.
+
+---
+
+## Requirements
+
+```
+fastapi
+uvicorn
+pandas
+python-multipart
+torch          # optional — enables fine-tuning
+transformers   # optional — enables fine-tuning
+anthropic      # optional — enables Claude fallback
+```
+
+Full pinned list in `backend/requirements.txt`.
