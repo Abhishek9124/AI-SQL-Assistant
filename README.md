@@ -1,4 +1,4 @@
-# NL-to-SQL Engine — Natural Language to SQL on Any CSV
+# AI SQL Assistant — Natural Language to SQL on Any CSV
 
 Upload any CSV, ask questions in plain English, and get back real SQL executed live against your data — shown as a table with CSV export and an auto-generated chart.
 
