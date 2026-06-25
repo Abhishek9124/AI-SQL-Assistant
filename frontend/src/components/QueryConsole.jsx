@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Send, Loader2 } from "lucide-react";
 
-export default function QueryConsole({ examples, loading, onAsk }) {
+export default function QueryConsole({ examples, loading, onAsk, datasetName }) {
   const [value, setValue] = useState("");
 
   const submit = () => {
@@ -13,7 +13,7 @@ export default function QueryConsole({ examples, loading, onAsk }) {
     <div className="glass rounded-3xl p-5 shadow-card md:p-6">
       <label className="mb-2 flex items-center gap-2 text-sm font-medium text-white/70">
         <Sparkles size={16} className="text-gold" />
-        Ask about 120 years of Olympic history
+        Ask {datasetName ? <span className="font-mono text-gold/90">{datasetName}</span> : "your data"} anything
       </label>
 
       <div className="relative">
@@ -24,7 +24,7 @@ export default function QueryConsole({ examples, loading, onAsk }) {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
           }}
           rows={3}
-          placeholder="e.g. Which country won the most gold medals overall?"
+          placeholder="e.g. What is the total revenue by region?"
           className="w-full resize-none rounded-2xl border border-white/10 bg-black/30 p-4 pr-32 text-[15px] text-white placeholder-white/30 outline-none transition focus:border-gold/50 focus:ring-2 focus:ring-gold/20"
         />
         <button

@@ -1,4 +1,31 @@
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { animate, motion } from "framer-motion";
+
+// Smoothly counts from the previous value up to the new one. Falls back to
+// rendering the raw value verbatim for non-numeric stats (e.g. text labels).
+function AnimatedValue({ value }) {
+  const numeric =
+    typeof value === "string" ? Number(value.replace(/,/g, "")) : Number(value);
+  const isNumber = value !== "" && value != null && Number.isFinite(numeric);
+  const [display, setDisplay] = useState(isNumber ? 0 : value);
+  const prev = useRef(0);
+
+  useEffect(() => {
+    if (!isNumber) {
+      setDisplay(value);
+      return;
+    }
+    const controls = animate(prev.current, numeric, {
+      duration: 0.9,
+      ease: "easeOut",
+      onUpdate: (v) => setDisplay(Math.round(v).toLocaleString()),
+    });
+    prev.current = numeric;
+    return () => controls.stop();
+  }, [value, numeric, isNumber]);
+
+  return <>{display}</>;
+}
 
 export default function StatCard({ icon: Icon, label, value, accent = "#f5c518", delay = 0 }) {
   return (
@@ -6,7 +33,7 @@ export default function StatCard({ icon: Icon, label, value, accent = "#f5c518",
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
-      transition={{ duration: 0.5, delay }}
+      transition={{ type: "spring", stiffness: 260, damping: 22, delay }}
       className="glass group relative overflow-hidden rounded-2xl p-5 shadow-card transition-colors hover:border-white/20"
     >
       <div
@@ -25,7 +52,7 @@ export default function StatCard({ icon: Icon, label, value, accent = "#f5c518",
         </span>
       </div>
       <div className="mt-3 font-mono text-2xl font-bold text-white md:text-3xl">
-        {value}
+        <AnimatedValue value={value} />
       </div>
     </motion.div>
   );

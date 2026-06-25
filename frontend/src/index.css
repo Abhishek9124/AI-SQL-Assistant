@@ -6,6 +6,10 @@
   color-scheme: dark;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body,
 #root {
@@ -18,12 +22,13 @@ body {
   color: #e7e7ef;
   font-family: "Inter", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Animated aurora background */
+/* Animated aurora background — the radial blobs slowly drift for a living feel */
 .aurora {
   position: fixed;
-  inset: 0;
+  inset: -20%;
   z-index: -1;
   overflow: hidden;
   background:
@@ -31,12 +36,52 @@ body {
     radial-gradient(50% 50% at 85% 5%, rgba(245, 197, 24, 0.16), transparent 60%),
     radial-gradient(60% 60% at 70% 90%, rgba(223, 0, 36, 0.12), transparent 60%),
     #06060c;
+  animation: aurora-drift 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes aurora-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2%, -1.5%, 0) scale(1.05);
+  }
+  100% {
+    transform: translate3d(-2%, 1.5%, 0) scale(1.08);
+  }
 }
 
 .glass {
   background: rgba(255, 255, 255, 0.045);
   backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.25s ease, background 0.25s ease,
+    box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+/* Smooth, consistent easing for interactive elements */
+button,
+a {
+  transition: color 0.18s ease, background-color 0.18s ease,
+    border-color 0.18s ease, transform 0.12s ease, opacity 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+/* Respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .grid-overlay {

@@ -31,7 +31,7 @@ export default function ResultsTable({ columns, rows }) {
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = "olympics_result.csv";
+    a.download = "query_result.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
